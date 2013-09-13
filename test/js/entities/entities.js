@@ -9,6 +9,8 @@ game.PlayerEntity = me.ObjectEntity.extend({
 		this.updateColRect(-1,0,15,17)
 		this.startPos(1504,608);
 
+		this.in_battle = false;
+
 		this.direction = 'down';
 		this.renderable.addAnimation('down', [1,2,1,0]);
 		this.renderable.addAnimation('left', [4,5,4,3]);
@@ -133,9 +135,11 @@ game.PlayerEntity = me.ObjectEntity.extend({
 			this.timer -= 240;
 		}
 		*/
-		if((Math.floor(Math.random() * 25)) === 0)
+		if(!this.in_battle &&
+			(UP || DOWN || LEFT || RIGHT) &&
+			(Math.floor(Math.random() * 25)) === 0)
 		{
-			var bf = new BattleField();
+			var bf = new BattleField(this);
 			me.game.add(bf, this.z);
 			me.game.sort();
 		}
@@ -165,10 +169,28 @@ game.PlayerEntity = me.ObjectEntity.extend({
 
 var BattleField = me.ObjectEntity.extend({
 
-	init: function()
+	init: function(player)
 	{
 		//init battle
 		console.log('battle');
+		var vp = me.game.viewport.pos;
+		this.parent(vp.x + 64, vp.y + 64, {
+			spritewidth: me.video.getWidth() - 128,
+			spriteheight: me.video.getHeight() - 128,
+		});
+		this.player = player;
+
+		player.in_battle = true;
+	},
+
+	update: function ()
+	{
+		return true;
+	},
+
+	onDestroyEvent: function ()
+	{
+		this.player.in_battle = false;
 	},
 
 	getBorders: function()
@@ -178,18 +200,10 @@ var BattleField = me.ObjectEntity.extend({
 
 	draw: function(context)
 	{
-		
-		var player = me.game.getEntityByName('player')[0];
-		//var context = me.video.getSystemContext();
-		//var systext = me.video.getSystemContext();
-		console.log('draw called');
 		context.beginPath();
 		context.lineWidth='2';
 		context.strokeStyle='green';
-		var size = 200;
-		var x = player.pos.x - (size / 2);
-		var y = player.pos.y - (size / 2);
-		context.rect(x,y,size,size);
+		context.rect(this.pos.x, this.pos.y, this.width, this.height);
 		context.stroke();
 
 	}
