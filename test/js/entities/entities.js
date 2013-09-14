@@ -344,6 +344,8 @@ game.Slime = me.ObjectEntity.extend({
 		this.battleField = undefined;
 
 		this.setVelocity(3, 3);
+		this.toX = this.pos.x;
+		this.toY = this.pos.y;
 
 		this.updateColRect(5,27,16,16)
 
@@ -363,8 +365,6 @@ game.Slime = me.ObjectEntity.extend({
 	{
 		this.vel.x = 0;
 		this.vel.y = 0;
-		this.toX = this.pos.x;
-		this.toY = this.pos.y;
 
 		var UP = false,
 			DOWN = false,
@@ -380,6 +380,10 @@ game.Slime = me.ObjectEntity.extend({
 			var sa = this.spawnArea || this.battleField;
 			this.toX = Number.prototype.random(sa.pos.x, (sa.pos.x + sa.width) - this.width);
 			this.toY = Number.prototype.random(sa.pos.y, (sa.pos.y + sa.height)) ;
+
+			// Normalize destination vector
+			this.toX += -(this.toX % this.accel.x) + (this.pos.x % this.accel.x);
+			this.toY += -(this.toY % this.accel.y) + (this.pos.y % this.accel.y);
 		}
 
 		if(this.toX != this.pos.x || this.toY != this.pos.y)
@@ -392,11 +396,11 @@ game.Slime = me.ObjectEntity.extend({
 			{
 				LEFT = true;
 			}
-			if(this.pos.y < this.toY)
+			if(this.pos.y > this.toY)
 			{
 				UP = true;
 			} else
-			if(this.pos.y > this.toY)
+			if(this.pos.y < this.toY)
 			{
 				DOWN = true;
 			}
@@ -411,27 +415,24 @@ game.Slime = me.ObjectEntity.extend({
 
 			if(UP)
 			{
-				this.vel.y -= this.accel.y * me.timer.tick;
+				this.vel.y = -this.accel.y * me.timer.tick;
 				this.renderable.setCurrentAnimation('up');
 			}
 			if(DOWN)
 			{
-				this.vel.y += this.accel.y * me.timer.tick;
+				this.vel.y = this.accel.y * me.timer.tick;
 				this.renderable.setCurrentAnimation('down');
 			}
 			if(LEFT)
 			{
-				this.vel.x -= this.accel.x * me.timer.tick;
+				this.vel.x = -this.accel.x * me.timer.tick;
 				this.renderable.setCurrentAnimation('left');
 			}
 			if(RIGHT)
 			{
-				this.vel.x += this.accel.x * me.timer.tick;
+				this.vel.x = this.accel.x * me.timer.tick;
 				this.renderable.setCurrentAnimation('right');
 			}
-
-			if(this.pos.x == this.toX) this.toX = null;
-			if(this.pos.y == this.toY) this.toY = null;
 		}
 		this.updateMovement();
 		return true;
