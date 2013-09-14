@@ -223,11 +223,11 @@ var BattleField = me.ObjectEntity.extend({
 	draw: function(context)
 	{
 		context.beginPath();
-		context.lineWidth='2';
+		context.lineWidth=2;
 		context.strokeStyle='green';
 		context.rect(this.pos.x, this.pos.y, this.width, this.height);
 		context.stroke();
-
+		context.lineWidth=1;
 	}
 });
 
