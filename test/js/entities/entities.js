@@ -137,7 +137,7 @@ game.PlayerEntity = me.ObjectEntity.extend({
 			(Math.floor(Math.random() * 25)) === 0)
 		{
 			var bf = new BattleField(this);
-			me.game.add(bf, this.z);
+			me.game.add(bf);
 			me.game.sort();
 		}
 
@@ -176,6 +176,7 @@ var BattleField = me.ObjectEntity.extend({
 			spriteheight: me.video.getHeight() - 128,
 		});
 		this.player = player;
+		this.z = player.z;
 
 		player.in_battle = true;
 
@@ -196,10 +197,11 @@ var BattleField = me.ObjectEntity.extend({
 				console.log(r_pos);
 			var mon = new game.Slime(r_pos.x, r_pos.y);
 			me.game.add(mon, this.z);
-			me.game.sort();
 
 			mon.battleField = this;
 		}
+
+		me.game.sort();
 	},
 
 	update: function ()
