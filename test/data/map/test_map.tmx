@@ -53,6 +53,13 @@
     <property name="to" value="clear_map"/>
    </properties>
   </object>
+  <object name="SpawnPoint" x="1093" y="393" width="51" height="305">
+   <properties>
+    <property name="canSpawn" value="Slime"/>
+    <property name="randomChance" value=""/>
+    <property name="spawnLimit" value="3"/>
+    <property name="spawnTime" value="500"/>
+   </properties>
+  </object>
  </objectgroup>
- <objectgroup name="transfer" width="50" height="50" visible="0"/>
 </map>
