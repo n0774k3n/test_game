@@ -40,8 +40,11 @@ var game = {
 
         me.sys.gravity = 0;
         me.sys.preRender = false;
+
         me.entityPool.add('MyLevelEntity', MyLevelEntity);
         me.entityPool.add('BattleField', BattleField);
+        me.entityPool.add('Slime', game.Slime);
+        me.entityPool.add('SpawnPoint', SpawnPoint);
 
         var myChar = game.PlayerEntity;
         me.entityPool.add('player', myChar);

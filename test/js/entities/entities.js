@@ -6,7 +6,7 @@ game.PlayerEntity = me.ObjectEntity.extend({
 		
 		this.setVelocity(3, 3);
 
-		this.updateColRect(-1,0,15,17)
+		this.updateColRect(5,27,16,16)
 		this.startPos(1504,608);
 
 		this.in_battle = false;
@@ -115,12 +115,9 @@ game.PlayerEntity = me.ObjectEntity.extend({
 		
 		var res = me.game.collide(this);
 		//console.log(me.game);
-		/*	
+		/*
 		if(res)	{
-		if(res.obj.type == me.game.LEVEL_ENTITY)
-		{
-			console.log('ok');
-		}
+			console.log(res);
 		}
 		*/
 		this.updateMovement();
@@ -181,10 +178,35 @@ var BattleField = me.ObjectEntity.extend({
 		this.player = player;
 
 		player.in_battle = true;
+
+		//place enemy
+		var numMons = Number.prototype.random(1,3);
+		for(var num = 1; num <= numMons; num++)
+		{ 
+			var r_pos = new me.Vector2d();
+		    var good = false;
+				while(good == false)
+				{
+	        		r_pos.x = Number.prototype.random(this.pos.x, (this.pos.x + this.width) - 32) ;
+	        		r_pos.y = Number.prototype.random(this.pos.y, this.pos.y + this.height);
+	  
+	        		
+	        		good = true;
+				}
+				console.log(r_pos);
+			var mon = new game.Slime(r_pos.x, r_pos.y);
+			me.game.add(mon, this.z);
+			me.game.sort();
+
+			mon.battleField = this;
+		}
 	},
 
 	update: function ()
 	{
+		var pos = this.player.pos;
+		pos.x = pos.x.clamp(this.left, this.right - this.player.width);
+		pos.y = pos.y.clamp(this.top, this.bottom - this.player.height);
 		return true;
 	},
 
@@ -262,3 +284,156 @@ var MyLevelEntity = me.LevelEntity.extend({
 		player.pos.y = this.settings.locationY * 32;
 	}
 });
+
+var SpawnPoint = me.ObjectEntity.extend({
+	init: function(x,y,settings)
+	{
+		this.parent(x,y,settings);
+
+		this.limit = settings.spawnLimit;
+		this.canSpawn = settings.canSpawn;
+		this.monsterCount = 0;
+		this.spawnTime = settings.spawnTime;
+
+		this.player = me.game.getEntityByName('player')[0];
+
+
+		this.timer = 0;
+	},
+	update: function()
+	{
+
+		this.timer += me.timer.tick;
+		if(this.timer >= this.spawnTime && !this.player.in_battle)
+		{
+			if(this.monsterCount < this.limit)
+			{
+				console.log(game[this.canSpawn]);
+				var r_pos = new me.Vector2d();
+
+	        	r_pos.x = Number.prototype.random(this.pos.x, (this.pos.x + this.width) - 32) ;
+	        	r_pos.y = Number.prototype.random(this.pos.y, this.pos.y + this.height);
+				var enemy = new game[this.canSpawn](r_pos.x,r_pos.y);
+				me.game.add(enemy, this.z);
+				me.game.sort();
+
+				enemy.spawnArea = this;
+				enemy.spanwed = true;
+				
+				this.monsterCount++;
+			}
+			this.timer -= this.spawnTime;
+		}
+		return false;
+	}
+})
+
+game.Slime = me.ObjectEntity.extend({
+
+	init: function(x,y)
+	{
+		settings = {};
+		settings.image = 'monster';
+		settings.spriteheight = 32;
+		settings.spritewidth = 32; 
+		this.parent(x,y,settings);
+
+		this.spawned = false;
+		this.spawnArea = null;
+
+		this.battleField = undefined;
+
+		this.setVelocity(3, 3);
+
+		this.updateColRect(5,27,16,16)
+
+		this.in_battle = false;
+		this.target = undefined;
+
+		this.direction = 'down';
+		this.renderable.addAnimation('down', [7,6,7,8]);
+		this.renderable.addAnimation('left', [19,20,19,18]);
+		this.renderable.addAnimation('right', [31,32,31,30]);
+		this.renderable.addAnimation('up', [43,44,43,42]);
+
+		this.renderable.setCurrentAnimation(this.direction);
+
+	},
+	update: function()
+	{
+		this.vel.x = 0;
+		this.vel.y = 0;
+		this.toX = this.pos.x;
+		this.toY = this.pos.y;
+
+		var UP = false,
+			DOWN = false,
+			LEFT = false,
+			RIGHT = false,
+			RUN = false,
+			SPEED = 3,
+			RUN_SPEED = 5,
+			VEL = 0;
+
+		if((Math.floor(Math.random() * 250)) === 0)
+		{
+			var sa = this.spawnArea || this.battleField;
+			this.toX = Number.prototype.random(sa.pos.x, (sa.pos.x + sa.width) - this.width);
+			this.toY = Number.prototype.random(sa.pos.y, (sa.pos.y + sa.height)) ;
+		}
+
+		if(this.toX != this.pos.x || this.toY != this.pos.y)
+		{
+			if(this.pos.x < this.toX)
+			{
+				RIGHT = true;
+			} else
+			if(this.pos.x > this.toX)
+			{
+				LEFT = true;
+			}
+			if(this.pos.y < this.toY)
+			{
+				UP = true;
+			} else
+			if(this.pos.y > this.toY)
+			{
+				DOWN = true;
+			}
+			if(RUN == true)
+			{
+				this.setVelocity(RUN_SPEED,RUN_SPEED);
+			}
+			if(RUN == false)
+			{
+				this.setVelocity(SPEED,SPEED);
+			}
+
+			if(UP)
+			{
+				this.vel.y -= this.accel.y * me.timer.tick;
+				this.renderable.setCurrentAnimation('up');
+			}
+			if(DOWN)
+			{
+				this.vel.y += this.accel.y * me.timer.tick;
+				this.renderable.setCurrentAnimation('down');
+			}
+			if(LEFT)
+			{
+				this.vel.x -= this.accel.x * me.timer.tick;
+				this.renderable.setCurrentAnimation('left');
+			}
+			if(RIGHT)
+			{
+				this.vel.x += this.accel.x * me.timer.tick;
+				this.renderable.setCurrentAnimation('right');
+			}
+
+			if(this.pos.x == this.toX) this.toX = null;
+			if(this.pos.y == this.toY) this.toY = null;
+		}
+		this.updateMovement();
+		return true;
+	}
+})

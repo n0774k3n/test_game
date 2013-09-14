@@ -6,6 +6,9 @@ game.resources = [
 	 */
 	 {name: 'tiles', type: 'image', src: 'data/img/map/tiles.png'},
 	 {name: 'girl', type: 'image', src: 'data/img/sprite/girl.png'},
+	 //{name: 'girl', type: 'image', src: 'data/img/sprite/character.png'},
+	 {name: 'monster', type: 'image', src: 'data/img/sprite/monster2.png'},
+
 
 	/* Atlases 
 	 * @example
