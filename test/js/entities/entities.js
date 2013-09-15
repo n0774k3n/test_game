@@ -3,7 +3,7 @@ game.PlayerEntity = me.ObjectEntity.extend({
 	init: function(x,y,settings)
 	{
 		this.parent(x,y,settings);
-		
+
 		this.setVelocity(3, 3);
 
 		this.updateColRect(5,27,16,16)
@@ -112,7 +112,7 @@ game.PlayerEntity = me.ObjectEntity.extend({
 			this.renderable.setCurrentAnimation('right');
 		}
 
-		
+
 		var res = me.game.collide(this);
 		//console.log(me.game);
 		/*
@@ -176,6 +176,8 @@ var BattleField = me.ObjectEntity.extend({
 			spriteheight: me.video.getHeight() - 128,
 		});
 		this.player = player;
+		this.z = player.z;
+		this.monsters = [];
 
 		player.in_battle = true;
 
@@ -189,17 +191,26 @@ var BattleField = me.ObjectEntity.extend({
 				{
 	        		r_pos.x = Number.prototype.random(this.pos.x, (this.pos.x + this.width) - 32) ;
 	        		r_pos.y = Number.prototype.random(this.pos.y, this.pos.y + this.height);
-	  
-	        		
+	        		var mon = new game.Slime(r_pos.x, r_pos.y);
+					var col = mon.collisionMap.checkCollision(mon.collisionBox, mon.vel);
+					if(col.yprop.isSolid || col.xprop.isSolid)
+					{
+						console.log('COLLIDING!');
+						me.game.remove(mon);
+						continue;
+					}
 	        		good = true;
 				}
 				console.log(r_pos);
-			var mon = new game.Slime(r_pos.x, r_pos.y);
+			
 			me.game.add(mon, this.z);
-			me.game.sort();
+
+			this.monsters.push(mon);
 
 			mon.battleField = this;
 		}
+
+		me.game.sort();
 	},
 
 	update: function ()
@@ -222,12 +233,15 @@ var BattleField = me.ObjectEntity.extend({
 
 	draw: function(context)
 	{
-		context.beginPath();
-		context.lineWidth='2';
-		context.strokeStyle='green';
-		context.rect(this.pos.x, this.pos.y, this.width, this.height);
-		context.stroke();
 
+		context.strokeStyle='blue';
+		context.lineWidth=2;
+		context.save();
+		context.globalAlpha = .25;
+		context.fillStyle = 'green';
+		context.fillRect(this.pos.x, this.pos.y, this.width, this.height);
+		context.restore();
+		context.strokeRect(this.pos.x, this.pos.y, this.width, this.height);
 	}
 });
 
@@ -271,7 +285,7 @@ var MyLevelEntity = me.LevelEntity.extend({
 		{
 			me.levelDirector.loadLevel(this.to);
 		}
-		
+
 	},
 	onFadeComplete: function()
 	{
@@ -319,7 +333,7 @@ var SpawnPoint = me.ObjectEntity.extend({
 
 				enemy.spawnArea = this;
 				enemy.spanwed = true;
-				
+
 				this.monsterCount++;
 			}
 			this.timer -= this.spawnTime;
@@ -339,15 +353,21 @@ game.Slime = me.ObjectEntity.extend({
 		this.parent(x,y,settings);
 
 		this.spawned = false;
-		this.spawnArea = null;
+		this.spawnArea = undefined;
 
 		this.battleField = undefined;
 
-		this.setVelocity(3, 3);
+		this.setVelocity(1, 1);
+		this.toX = this.pos.x;
+		this.toY = this.pos.y;
 
 		this.updateColRect(5,27,16,16)
 
+		this.agressive = true;
+		this.checkTime = 50;
+		this.nextCheck = 0;
 		this.in_battle = false;
+		this.chaser = true;
 		this.target = undefined;
 
 		this.direction = 'down';
@@ -363,23 +383,39 @@ game.Slime = me.ObjectEntity.extend({
 	{
 		this.vel.x = 0;
 		this.vel.y = 0;
-		this.toX = this.pos.x;
-		this.toY = this.pos.y;
+
+		var sa = this.spawnArea || this.battleField;
 
 		var UP = false,
 			DOWN = false,
 			LEFT = false,
 			RIGHT = false,
-			RUN = false,
-			SPEED = 3,
-			RUN_SPEED = 5,
+			SPEED = 1,
+			RUN_SPEED = 2,
 			VEL = 0;
 
-		if((Math.floor(Math.random() * 250)) === 0)
+		this.run = false,
+
+		this.checkAI();
+		if(this.target == undefined && (Math.floor(Math.random() * 250)) === 0)
 		{
-			var sa = this.spawnArea || this.battleField;
+			
 			this.toX = Number.prototype.random(sa.pos.x, (sa.pos.x + sa.width) - this.width);
 			this.toY = Number.prototype.random(sa.pos.y, (sa.pos.y + sa.height)) ;
+
+			// Normalize destination vector
+			this.toX += -(this.toX % this.accel.x) + (this.pos.x % this.accel.x);
+			this.toY += -(this.toY % this.accel.y) + (this.pos.y % this.accel.y);
+			console.log("to x "+this.toX+" to y "+this.toY);
+		}
+		if(this.target)
+		{
+			this.toX = this.target.pos.x;
+			this.toY = this.target.pos.y;
+
+			// Normalize destination vector
+			this.toX += -(this.toX % this.accel.x) + (this.pos.x % this.accel.x);
+			this.toY += -(this.toY % this.accel.y) + (this.pos.y % this.accel.y);
 		}
 
 		if(this.toX != this.pos.x || this.toY != this.pos.y)
@@ -392,48 +428,83 @@ game.Slime = me.ObjectEntity.extend({
 			{
 				LEFT = true;
 			}
-			if(this.pos.y < this.toY)
+			if(this.pos.y > this.toY)
 			{
 				UP = true;
 			} else
-			if(this.pos.y > this.toY)
+			if(this.pos.y < this.toY)
 			{
 				DOWN = true;
 			}
-			if(RUN == true)
+			if(this.run == true)
 			{
 				this.setVelocity(RUN_SPEED,RUN_SPEED);
 			}
-			if(RUN == false)
+			if(this.run == false)
 			{
 				this.setVelocity(SPEED,SPEED);
 			}
 
 			if(UP)
 			{
-				this.vel.y -= this.accel.y * me.timer.tick;
+				this.vel.y = -this.accel.y * me.timer.tick;
 				this.renderable.setCurrentAnimation('up');
 			}
 			if(DOWN)
 			{
-				this.vel.y += this.accel.y * me.timer.tick;
+				this.vel.y = this.accel.y * me.timer.tick;
 				this.renderable.setCurrentAnimation('down');
 			}
 			if(LEFT)
 			{
-				this.vel.x -= this.accel.x * me.timer.tick;
+				this.vel.x = -this.accel.x * me.timer.tick;
 				this.renderable.setCurrentAnimation('left');
 			}
 			if(RIGHT)
 			{
-				this.vel.x += this.accel.x * me.timer.tick;
+				this.vel.x = this.accel.x * me.timer.tick;
 				this.renderable.setCurrentAnimation('right');
 			}
-
-			if(this.pos.x == this.toX) this.toX = null;
-			if(this.pos.y == this.toY) this.toY = null;
 		}
 		this.updateMovement();
 		return true;
+	},
+
+	checkAI: function()
+	{
+		//enemy search
+		if(this.agressive == true)
+		{
+			this.nextCheck += me.timer.tick;
+			if(this.nextCheck >= this.checkTime)
+			{
+				var target = (this.spawned) ? this.spawnArea.player : this.battleField.player;
+				var distance = this.distanceTo(target);
+				console.log(distance);
+
+				if(distance <= 150)
+				{
+					this.target = target;
+				}
+
+				this.nextCheck -= this.checkTime;
+			}
+
+		}
+
+		if(this.target)
+		{
+			if(this.distanceTo(this.target) <= 75 && this.chaser == true)
+			{
+				this.run = true;
+
+			}
+
+			if(this.distanceTo(this.target) > 300)
+			{
+				this.target = undefined;
+			}
+		}
+
 	}
 })
